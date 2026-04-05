@@ -12,6 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog  # <--- AGREGA ESTA LÍNEA
 import cv2
 import sys
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -70,7 +71,9 @@ class Ui_MainWindow(object):
         self.label_7.setGeometry(QtCore.QRect(580, 270, 221, 141))
         self.label_7.setText("")
         self.label_7.setObjectName("label_7")
-        self.label_7.setPixmap(QtGui.QPixmap("ecci.jpg"))
+        ruta_base = os.path.dirname(os.path.abspath(__file__))
+        ruta_logo = os.path.join(ruta_base, "ecci.jpg")
+        self.label_7.setPixmap(QtGui.QPixmap(ruta_logo))
         self.label_7.setScaledContents(True)
         self.label_7.setAlignment(QtCore.Qt.AlignCenter)
         self.label_4 = QtWidgets.QLabel(self.centralwidget)
