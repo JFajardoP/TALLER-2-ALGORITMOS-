@@ -134,7 +134,8 @@ class Ui_MainWindow(object):
 
     def actualizar_robot(self):
         seleccion = self.comboBox.currentText()
-        
+        # Obtenemos la ruta de la carpeta donde está este script
+        ruta_base = os.path.dirname(os.path.abspath(__file__))
         # 2. Lógica de Articulaciones (Static Text / QLabel)
         # Suponiendo que tu QLabel de información se llama label_info
         if seleccion == "CARTESIANO":
