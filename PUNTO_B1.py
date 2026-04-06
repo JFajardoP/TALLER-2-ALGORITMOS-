@@ -14,19 +14,31 @@ import sys
 
 try:
     from gpiozero import AngularServo
-    from gpiozero.pins.pigpio import PiGPIOFactory
-    factory = PiGPIOFactory()
-    # Servos en GPIO 17 y 18
-    SERVO_1 = AngularServo(17, min_angle=0, max_angle=180, pin_factory=factory)
-    SERVO_2 = AngularServo(18, min_angle=0, max_angle=180, pin_factory=factory)
-except ImportError:
-    print("Error: No se detectó gpiozero. Ejecutando en modo simulación.")
+    from gpiozero.pins.lgpio import LGPIOFactory
+    factory = LGPIOFactory()
+    
+    # Ajuste de pulsos para mayor rango y estabilidad
+    # min_pulse_width=0.0005 (0.5ms) y max_pulse_width=0.0025 (2.5ms)
+    SERVO_1 = AngularServo(12, min_angle=0, max_angle=180, 
+                           min_pulse_width=0.0005, max_pulse_width=0.0025, 
+                           pin_factory=factory)
+    SERVO_2 = AngularServo(13, min_angle=0, max_angle=180, 
+                           min_pulse_width=0.0005, max_pulse_width=0.0025, 
+                           pin_factory=factory)
+except (ImportError, IOError):
+    print("Error: Hardware no detectado.")
     SERVO_1 = SERVO_2 = None
 
+
+
 class Ui_MainWindow(object):
+    def __init__(self):
+        self.ultimo_angulo_1 = -1
+        self.ultimo_angulo_2 = -1
+
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(519, 373)
+        MainWindow.resize(600, 320)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.label = QtWidgets.QLabel(self.centralwidget)
@@ -90,6 +102,7 @@ class Ui_MainWindow(object):
         ruta_base = os.path.dirname(os.path.abspath(__file__))
         ruta_logo = os.path.join(ruta_base, "ecci.jpg")
         self.label_7.setPixmap(QtGui.QPixmap(ruta_logo))
+        self.label_7.setScaledContents(True)
         self.label_8 = QtWidgets.QLabel(self.centralwidget)
         self.label_8.setGeometry(QtCore.QRect(20, 250, 141, 16))
         font = QtGui.QFont()
@@ -122,14 +135,25 @@ class Ui_MainWindow(object):
         self.label_8.setText(_translate("MainWindow", "ELECTIVA DE ROBOTICA"))
 
     def servos(self):
-        servo = self.textEdit.toPlainText()
-        angulo = self.horizontalSlider.value()
-        if servo == "SERVO 1":
-            self.label_3.setText(f"El ángulo del servo 1 es: {angulo}°")
-        elif servo == "SERVO 2":
-            self.label_3.setText(f"El ángulo del servo 2 es: {angulo}°")
-        else:
-            self.label_3.setText("Ingrese un servo válido (SERVO 1 o SERVO 2)")
+        servo_name = self.textEdit.toPlainText().strip().upper()
+        nuevo_angulo = self.horizontalSlider.value()
+        
+        # Umbral de movimiento para evitar vibración (2 grados)
+        umbral = 5
+
+        if servo_name == "SERVO 1" and SERVO_1:
+            # Solo mueve si el cambio es mayor al umbral
+            if abs(nuevo_angulo - self.ultimo_angulo_1) >= umbral:
+                SERVO_1.angle = nuevo_angulo
+                self.ultimo_angulo_1 = nuevo_angulo
+                self.label_3.setText(f"Servo 1: {nuevo_angulo}°")
+        
+        elif servo_name == "SERVO 2" and SERVO_2:
+            if abs(nuevo_angulo - self.ultimo_angulo_2) >= umbral:
+                SERVO_2.angle = nuevo_angulo
+                self.ultimo_angulo_2 = nuevo_angulo
+                self.label_3.setText(f"Servo 2: {nuevo_angulo}°")
+
 
 
 if __name__ == "__main__":
