@@ -9,9 +9,9 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from guizero import app, Text
 import gpiozero import Button
-
+import os
+import sys
 
 
 
@@ -24,6 +24,10 @@ class Ui_MainWindow(object):
         self.label_7 = QtWidgets.QLabel(self.centralwidget)
         self.label_7.setGeometry(QtCore.QRect(350, 120, 221, 141))
         self.label_7.setText("")
+        ruta_base = os.path.dirname(os.path.abspath(__file__))
+        ruta_logo = os.path.join(ruta_base, "ecci.jpg")
+        self.label_7.setPixmap(QtGui.QPixmap(ruta_logo))
+        self.label_7.setScaledContents(True)
         self.label_7.setObjectName("label_7")
         self.label_8 = QtWidgets.QLabel(self.centralwidget)
         self.label_8.setGeometry(QtCore.QRect(90, 190, 141, 16))
@@ -82,6 +86,8 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
+        self.sensor = Button(17, pull_up=False)  # Ajusta el número del pin según tu conexión
+
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -94,6 +100,16 @@ class Ui_MainWindow(object):
         self.label_5.setText(_translate("MainWindow", "UNIVERSIDAD ECCI"))
         self.label.setText(_translate("MainWindow", "LECTURA DE PUERTOS"))
         self.label_3.setText(_translate("MainWindow", "OPRIMA EL PULSADOR FISICO"))
+
+    def estado(self):
+        if self.sensor.is_pressed:
+            self.label_2.setText("ALTO")
+            # Aplicamos estilo: Texto blanco, Fondo rojo
+            self.label_2.setStyleSheet("background-color: red; color: white; border-radius: 5px;")
+        else:
+            self.label_2.setText("BAJO")
+            # Aplicamos estilo: Texto blanco, Fondo azul
+            self.label_2.setStyleSheet("background-color: blue; color: white; border-radius: 5px;")
 
 
 if __name__ == "__main__":
