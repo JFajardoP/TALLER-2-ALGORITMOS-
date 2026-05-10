@@ -1,86 +1,122 @@
     def dibujar_area(self):
-        try:
-            # 1. Dimensiones y Puntos de trayectoria
-            l1, l2 = 10.7, 10.3
-            puntos_cartesianos = [
-                (0.5, 0.5), (21, 0), (-21, 0), (-10, -10), (-0.5, -0.5)
-            ]
+        # Dimensiones para 2R
+        l1 = 10.7
+        l2 = 10.3
 
-            # 2. Cinemï¿½tica Inversa para obtener los ï¿½ngulos de cada punto
-            puntos_q = []
-            for px, py in puntos_cartesianos:
-                q = InverseKinematics2R(l1, l2, px, py)
-                puntos_q.append(q)
+        # Cinemática inversa 2R (Solo Px y Py) - Siguiendo TU orden de parámetros
+        # Punto 0
+        P0x = 0.5
+        P0y = 0.5
+        [theta1_P0, theta2_P0] = InverseKinematics2R(l1, l2, P0x, P0y)
 
-            n = 10
-            x_waypoint = numpy.arange(1, n + 1, 1)
+        # Punto 1
+        P1x = 21
+        P1y = 0
+        [theta1_P1, theta2_P1] = InverseKinematics2R(l1, l2, P1x, P1y)
+
+        # Punto 2
+        P2x = -21
+        P2y = 0
+        [theta1_P2, theta2_P2] = InverseKinematics2R(l1, l2, P2x, P2y)
+
+        # Punto 3
+        P3x = -10
+        P3y = -10
+        [theta1_P3, theta2_P3] = InverseKinematics2R(l1, l2, P3x, P3y)
+
+        # Punto 4
+        P4x = -0.5
+        P4y = -0.5
+        [theta1_P4, theta2_P4] = InverseKinematics2R(l1, l2, P4x, P4y)
+
+        n = 10
+        x = numpy.arange(1, n + 1, 1)
+
+        # Interpolación de 2 ángulos únicamente
+        theta1_P0toP1 = numpy.linspace(theta1_P0, theta1_P1, n)
+        theta2_P0toP1 = numpy.linspace(theta2_P0, theta2_P1, n)
+        theta1_P1toP2 = numpy.linspace(theta1_P1, theta1_P2, n)
+        theta2_P1toP2 = numpy.linspace(theta2_P1, theta2_P2, n)
+        theta1_P2toP3 = numpy.linspace(theta1_P2, theta1_P3, n)
+        theta2_P2toP3 = numpy.linspace(theta2_P2, theta2_P3, n)
+        theta1_P3toP4 = numpy.linspace(theta1_P3, theta1_P4, n)
+        theta2_P3toP4 = numpy.linspace(theta2_P3, theta2_P4, n)
+
+        # d almacenará X e Y (usamos 2 filas)
+        d = numpy.zeros((2, n))
+
+        fig1 = plt.figure()
+        ax0 = fig1.add_subplot(111)
+        ax0.set_xlabel('X')
+        ax0.set_ylabel('Y')
+        ax0.set_xlim(-25, 25)
+        ax0.set_ylim(-25, 25)
+        ax0.set_title('Trayectoria en Plano XY')
+        ax0.grid(True)
+
+        # --- BLOQUES SEPARADOS DE MOVIMIENTO Y DIBUJO ---
+        for i in range(0, n):
+            # Movimiento físico (con conversión a grados y protección)
+            if SERVO_1 and SERVO_2:
+                SERVO_1.angle = max(0, min(180, math.degrees(theta1_P0toP1[i])))
+                SERVO_2.angle = max(0, min(180, math.degrees(theta2_P0toP1[i])))
             
-            # Configuraciï¿½n Figura 1: Trayectoria XY
-            fig1 = plt.figure(1)
-            ax0 = fig1.add_subplot(111)
-            ax0.set_xlim(-25, 25)
-            ax0.set_ylim(-25, 25)
-            ax0.set_title('Trayectoria en Plano XY y Movimiento Real')
-            ax0.grid(True)
+            MTH = ForwardKinematics2R(l1, l2, theta1_P0toP1[i], theta2_P0toP1[i])
+            d[0, i] = MTH.t[0]
+            d[1, i] = MTH.t[1]    
+            ax0.plot(d[0, i], d[1, i], '.b')
+            plt.pause(0.001)
 
-            # Listas para las grï¿½ficas de espacio articulacional y operacional
-            ult_q1, ult_q2, ult_x, ult_y = [], [], [], []
-
-            # 3. Bucle de interpolaciï¿½n, movimiento y dibujo
-            for j in range(len(puntos_q) - 1):
-                # Interpolaciï¿½n entre el punto actual y el siguiente
-                theta1_arco = numpy.linspace(puntos_q[j][0], puntos_q[j+1][0], n)
-                theta2_arco = numpy.linspace(puntos_q[j][1], puntos_q[j+1][1], n)
+        for i in range(0, n):
+            if SERVO_1 and SERVO_2:
+                SERVO_1.angle = max(0, min(180, math.degrees(theta1_P1toP2[i])))
+                SERVO_2.angle = max(0, min(180, math.degrees(theta2_P1toP2[i])))
                 
-                for i in range(n):
-                    # --- CINEMï¿½TICA DIRECTA PARA DIBUJAR ---
-                    MTH = ForwardKinematics2R(l1, l2, theta1_arco[i], theta2_arco[i])
-                    posX, posY = MTH.t[0], MTH.t[1]
-                    ax0.plot(posX, posY, '.b')
-                    
-                    # --- PROCESAMIENTO PARA SERVOS (Protecciï¿½n de Rango) ---
-                    # Convertir a grados si estï¿½n en radianes: math.degrees(...)
-                    # Si ya estï¿½n en grados, dejar solo el float()
-                    angulo1 = math.degrees(theta1_arco[i])
-                    angulo2 = math.degrees(theta2_arco[i])
-                    
-                    # Limitar entre 0 y 180 para evitar el error "Angle out of range"
-                    angulo1_clamped = max(0, min(180, angulo1))
-                    angulo2_clamped = max(0, min(180, angulo2))
+            MTH = ForwardKinematics2R(l1, l2, theta1_P1toP2[i], theta2_P1toP2[i])
+            d[0, i] = MTH.t[0]
+            d[1, i] = MTH.t[1]    
+            ax0.plot(d[0, i], d[1, i], '.b')
+            plt.pause(0.001)
 
-                    if SERVO_1 is not None and SERVO_2 is not None:
-                        SERVO_1.angle = float(angulo1_clamped)
-                        SERVO_2.angle = float(angulo2_clamped)
-                    
-                    # Guardar datos del ï¿½ltimo tramo para la Figura 2
-                    if j == len(puntos_q) - 2:
-                        ult_q1.append(angulo1_clamped)
-                        ult_q2.append(angulo2_clamped)
-                        ult_x.append(posX)
-                        ult_y.append(posY)
+        for i in range(0, n):
+            if SERVO_1 and SERVO_2:
+                SERVO_1.angle = max(0, min(180, math.degrees(theta1_P2toP3[i])))
+                SERVO_2.angle = max(0, min(180, math.degrees(theta2_P2toP3[i])))
+                
+            MTH = ForwardKinematics2R(l1, l2, theta1_P2toP3[i], theta2_P2toP3[i])
+            d[0, i] = MTH.t[0]
+            d[1, i] = MTH.t[1]    
+            ax0.plot(d[0, i], d[1, i], '.b')
+            plt.pause(0.001)
 
-                    plt.pause(0.01)
+        for i in range(0, n):
+            if SERVO_1 and SERVO_2:
+                SERVO_1.angle = max(0, min(180, math.degrees(theta1_P3toP4[i])))
+                SERVO_2.angle = max(0, min(180, math.degrees(theta2_P3toP4[i])))
+                
+            MTH = ForwardKinematics2R(l1, l2, theta1_P3toP4[i], theta2_P3toP4[i])
+            d[0, i] = MTH.t[0]
+            d[1, i] = MTH.t[1]    
+            ax0.plot(d[0, i], d[1, i], '.b')
+            plt.pause(0.001)
 
-            plt.show(block=False)
+        plt.show(block=False)
 
-            # 4. Grï¿½ficas de Espacio Articulacional y Operacional (Figura 2)
-            fig2 = plt.figure(2)
-            ax1, ax2 = fig2.subplots(2, 1)
+        # Gráficas de Espacio Articulacional y Operacional
+        fig2 = plt.figure(2)
+        ax1, ax2 = fig2.subplots(2, 1)
 
-            ax1.plot(x_waypoint, ult_q1, 'tab:red', label='q1')
-            ax1.plot(x_waypoint, ult_q2, 'tab:green', label='q2')
-            ax1.set_title('Espacio articulacional (ï¿½ltimo tramo)')
-            ax1.set_ylabel('ï¿½ngulo (ï¿½)')
-            ax1.legend(); ax1.grid(True)
+        ax1.plot(x, numpy.rad2deg(theta1_P1toP2), 'tab:red', label='q1')
+        ax1.plot(x, numpy.rad2deg(theta2_P1toP2), 'tab:green', label='q2')
+        ax1.set_title('Espacio articulacional')
+        ax1.legend(loc="upper left")
+        ax1.grid(True)
 
-            ax2.plot(x_waypoint, ult_x, 'tab:red', label='X')
-            ax2.plot(x_waypoint, ult_y, 'tab:green', label='Y')
-            ax2.set_title('Espacio operacional (ï¿½ltimo tramo)')
-            ax2.set_ylabel('Posiciï¿½n (cm)')
-            ax2.legend(); ax2.grid(True)
+        ax2.plot(x, d[0, :], 'tab:red', label='X')
+        ax2.plot(x, d[1, :], 'tab:green', label='Y')
+        ax2.set_title('Espacio operacional')
+        ax2.legend(loc="upper left")
+        ax2.grid(True)
 
-            plt.tight_layout()
-            plt.show()
-
-        except Exception as e:
-            print(f"Error en dibujar_area: {e}")
+        plt.tight_layout()
+        plt.show()
